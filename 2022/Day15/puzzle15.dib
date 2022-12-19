@@ -1,0 +1,33 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":null,"items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"html","languageName":"HTML"},{"name":"sql","languageName":"SQL"},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"httpRequest","languageName":"http"},{"name":"value"}]}}
+
+#!fsharp
+
+type Pos = { 
+    x: int 
+    y: int 
+}
+type Sensor = { 
+    pos: Pos
+    beacon: Pos 
+}
+module Parser =
+    open System.Text.RegularExpressions
+
+    let regex = 
+        Regex("Sensor at x=(?<sx>-?\d+), y=(?<sy>-?\d+): closest beacon is at x=(?<bx>-?\d+), y=(?<by>-?\d+)")
+
+    let parse line =
+        regex.Matches(line)
+        |> Seq.map (fun m -> 
+            let sx = m.Groups.["sx"].Value |> int
+            let sy = m.Groups.["sy"].Value |> int
+            let bx = m.Groups.["bx"].Value |> int
+            let by = m.Groups.["by"].Value |> int
+            { 
+                pos = { x = sx; y = sy }
+                beacon = { x = bx; y = by } 
+            }
+        )
+        |> Seq.head
