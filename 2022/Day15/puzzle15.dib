@@ -12,7 +12,7 @@ type Sensor = {
     pos: Pos
     beacon: Pos 
 }
-module Parser =
+module Sensor =
     open System.Text.RegularExpressions
 
     let regex = 
@@ -31,3 +31,11 @@ module Parser =
             }
         )
         |> Seq.head
+
+type Signal =
+| Beacon 
+| Sensor
+| Covered
+type SignalMap = Map<Pos,Signal>
+module Preview =
+    let plot map sensor
