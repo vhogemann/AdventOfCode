@@ -31,11 +31,23 @@ module Sensor =
             }
         )
         |> Seq.head
+    
+    let range (sensor:Sensor) =
+        let distance =
+            Math.Abs(sensor.pos.x - sensor.beacon.x) +
+            Math.Abs(sensor.pos.y - sensor.beacon.y)
+        seq {
+            for xOffset in [ -distance .. distance ] do 
+                let yOffset = Math.Abs(xOffset) - distance
+                for y in [-yOffset .. yOffset] do
+                    let dx = sensor.pos.x + xOffset
+                    let dy = sensor.pos.y + yOffset
+                    yield { x = dx; y = dy }
+        }
 
-type Signal =
-| Beacon 
-| Sensor
-| Covered
-type SignalMap = Map<Pos,Signal>
 module Preview =
-    let plot map sensor
+    let build map sensor =
+        sensor
+        |> Sensor.range
+        |> Seq.fold(fun map pos -> map |> Map.add pos "🟢") map
+    
