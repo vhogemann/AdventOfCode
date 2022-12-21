@@ -82,12 +82,24 @@ module Slice =
             [ sa; ea ]
             |> Seq.append slices
 
-        let i_aux line range =
-            if line >= range.top.y && line <= range.bottom.y then 
-                let s = range.distance - line
-                let e = range.distance + line
+        let downFun (pos:Pos) =
+            let b = pos.y - pos.x
+            fun x -> x - b
+
+        let riseFun (pos:Pos) =
+            let b = pos.y + pos.x
+            fun x -> b - x
+
+        let i_aux line (sensor:Sensor) =
+            if line >= sensor.range.top.y && line < sensor.pos.y then 
+                let s = (riseFun sensor.range.top) line
+                let e = (downFun sensor.range.top) line
                 Some (Start s, End e)
-            else 
+            elif line >= sensor.pos.y && line <= sensor.range.bottom.y then
+                let s = (downFun sensor.range.bottom) line
+                let e = (riseFun sensor.range.bottom) line
+                Some (Start s, End e)
+            else
                 None
 
         let compact slices =
@@ -103,7 +115,7 @@ module Slice =
             c_aux 0 List.empty (slices |> List.ofSeq)
 
         sensors
-        |> Seq.map (fun it -> it.range |> i_aux line )
+        |> Seq.map (i_aux line)
         |> Seq.choose id
         |> Seq.fold merge Seq.empty
         |> Seq.sortBy (fun it -> match it with Start s -> s | End e -> e )
@@ -197,7 +209,10 @@ module Preview =
 
 
     let plot line (sensors:Sensor seq) =
-        let tl, br = dimensions sensors
+        //let tl, br = dimensions sensors
+        let tl = Point.ofInts(0,0)
+        let br = Point.ofInts(4000000,4000000)
+        //display $"{tl} {br}"
         let area = Area.fromPoints tl br
         let viewbox = ViewBox.create tl area
 
@@ -224,7 +239,10 @@ let sensors =
     File.ReadLines( ResolutionFolder + "/input15.txt")
     |> Seq.map Sensor.parse
 
-let line = 2000000
+let line = 
+    //10
+    2000000
+
 let intersect =
     sensors
     |> Slice.intersect line
@@ -241,3 +259,24 @@ intersect - found
 #!fsharp
 
 sensors |> Preview.plot line
+
+#!fsharp
+
+let compute = fun line -> async {
+        let intersect = sensors |> Slice.intersect line
+        let result =
+            if (intersect |> Seq.length ) > 2 then 
+                Some (line, intersect)
+            else 
+                None
+        return result
+    }
+let result =
+    [0 .. 4000000]
+    |> Seq.chunkBySize 1000
+    |> Seq.map (Seq.map compute) 
+    |> Seq.concat
+    |> Async.Parallel
+    |> Async.RunSynchronously
+
+result |> Seq.choose id
