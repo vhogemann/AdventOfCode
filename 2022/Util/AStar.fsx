@@ -5,8 +5,6 @@ type AStar<'T when 'T :comparison> = {
     gScore: Map<'T, int>
     fScore: Map<'T, int>
     cameFrom: Map<'T,'T>
-    scorer: 'T -> 'T -> int
-    neighbours: 'T -> 'T seq
 } with
     member this.Next() =
         match this.openSet |> List.ofSeq with
@@ -16,11 +14,11 @@ type AStar<'T when 'T :comparison> = {
                 current = head
                 openSet = tail |> Set.ofList
             }
-module AStar =
-    type ScoreFun<'T> = 'T -> 'T -> int
-    type NeighbourFun<'T> = 'T -> 'T seq
 
-    let create start goal (scorer:ScoreFun<_>) (neighbours:NeighbourFun<_>)=
+type ScoreFun<'T> = 'T -> 'T -> int
+type NeighbourFun<'T> = 'T -> 'T seq
+module AStar =
+    let create start goal (scorer:ScoreFun<_>) (neighbours:NeighbourFun<_>) : AStar<_> =
         {
             goal = goal
             current = start
@@ -28,6 +26,30 @@ module AStar =
             gScore = [(start,0)] |> Map.ofList
             fScore = [(start, scorer start goal)] |> Map.ofList
             cameFrom = Map.empty
-            scorer = scorer
-            neighbours = neighbours
         }
+
+    let next state = 
+        match state.openSet |> List.ofSeq with
+        | [] -> state
+        | head :: tail ->
+            { state with 
+                current = head
+                openSet = tail |> Set.ofList
+            }
+
+    let rec find (score:ScoreFun<_>) (neighbours:NeighbourFun<_>) state =
+        if state.goal = state.current then state else
+        let state = next state
+
+        let folder state node =
+            let tentative = (state.gScore.Item (state.current)) + + (score state.goal node)
+            let actual = state.gScore.TryFind node |> Option.defaultValue 99999
+            if tentative < actual then
+                state
+            else
+                state
+        
+        state.current
+        |> neighbours
+        |> Seq.fold folder state
+        |> find score neighbours
